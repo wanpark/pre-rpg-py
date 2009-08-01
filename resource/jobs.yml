@@ -1,0 +1,51 @@
+-
+  name: villager
+  label: 村人
+  hp: 10
+  skills:
+    - attack
+    - defence
+  description: |
+    やっかいごとはごめんだね
+
+-
+  name: cat
+  label: ねこ
+  hp: 6
+  skills:
+    - attack
+    - defence
+  description: |
+    魔女となかがいいらしい
+
+-
+  name: witch
+  label: 魔女
+  hp: 8
+  skills:
+    - fire
+    - attack
+    - defence
+  traits:
+    - magician
+    - nerd
+  requires:
+    - villager
+  description: |
+    みならい魔法使い
+
+-
+  name: dragon
+  label: ドラゴン
+  hp: 30
+  skills:
+    - attack
+    - defence
+  traits:
+    - dragon
+  requires:
+    - cat
+    - witch
+  description: |
+    伝説の生物
+
