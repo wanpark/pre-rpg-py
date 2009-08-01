@@ -2,9 +2,7 @@
 
 import pygame
 from pygame.locals import *
-import rpg
 import rpg.sprite
-import rpg.loader
 import rpg.event
 import rpg.model
 import rpg.lang
