@@ -54,13 +54,15 @@ def poll():
             up_keys.add(event.key)
             safe_remove(pressed_keys, event.key)
 
-        for listener in listeners.get(event.type, set()):
+        # avoid change during iteration
+        for listener in set(listeners.get(event.type, set())):
             listener(event)
 
 
 # utility functions
 def safe_remove(container, item):
     if item in container: container.remove(item)
+
 
 
 class Event(object):
@@ -84,4 +86,4 @@ class EventDispatcher(object):
 
     def dispatch(self, type, **kwargs):
         for listener in self.event_listeners.get(type, set()):
-            listener(Event(type = type, **kwargs))
+            listener(Event(type = type, target = self, **kwargs))

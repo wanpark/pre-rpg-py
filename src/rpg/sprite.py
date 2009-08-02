@@ -24,10 +24,10 @@ def remove_from_clickable(scene_group, *sprites):
 
 
 
-class Group(pygame.sprite.RenderUpdates):
+class Group(pygame.sprite.OrderedUpdates):
     def __init__(self, *sprites):
         self.parents = set()
-        pygame.sprite.Group.__init__(self, *sprites)
+        super(Group, self).__init__(*sprites)
 
     def scene_group(self):
         for group in self.parents:
@@ -40,20 +40,20 @@ class Group(pygame.sprite.RenderUpdates):
             sprite.rect.move_ip(x, y)
 
     def add(self, *sprites):
-        pygame.sprite.RenderUpdates.add(self, *sprites)
+        super(Group, self).add(*sprites)
         add_to_clickable(self.scene_group(), *sprites)
 
     def remove(self, *sprites):
         remove_from_clickable(self.scene_group(), *sprites)
-        pygame.sprite.RenderUpdates.remove(self, *sprites)
+        super(Group, self).remove(*sprites)
 
 
 class CompositeGroup(object):
     def __init__(self, *groups):
         self.parents = set()
         self.default_group = Group()
-        self.groups = set()
-        self.add(self.default_group)
+        self.default_group.parents.add(self)
+        self.groups = []
         self.add(*groups)
         self.needs_refresh_display = True
 
@@ -67,6 +67,8 @@ class CompositeGroup(object):
         for sprite in self.sprites():
             sprite.rect.move_ip(x, y)
 
+    def get_groups(self):
+        return self.groups + [self.default_group]
 
     def add(self, *groups):
         for group in groups:
@@ -74,7 +76,7 @@ class CompositeGroup(object):
                 self.default_group.add(group)
             else:
                 group.parents.add(self)
-                self.groups.add(group)
+                self.groups.append(group)
                 self.needs_refresh_display = True
         add_to_clickable(self.scene_group(), *sprites_from_groups(groups))
 
@@ -92,12 +94,12 @@ class CompositeGroup(object):
         return sprites_from_groups(self.groups)
 
     def update(self):
-        for group in self.groups:
+        for group in self.get_groups():
             group.update()
 
     def draw(self, screen):
         dirty_rects = []
-        for group in self.groups:
+        for group in self.get_groups():
             rect = group.draw(screen)
             if rect:
                 dirty_rects += rect
@@ -117,13 +119,12 @@ class CompositeGroup(object):
         if self.needs_refresh_display:
             screen.blit(background, (0, 0))
         else:
-            for group in self.groups:
+            for group in self.get_groups():
                 group.clear(screen, background)
 
     def empty(self):
         self.remove(*self.groups)
         self.default_group.empty()
-        self.add(self.default_group)
         self.needs_refresh_display = True
 
     def refresh_display(self):
@@ -272,9 +273,12 @@ class Sprite(pygame.sprite.Sprite):
             if sg: return sg;
         return None
 
+    def is_displayed(self):
+        return not not self.scene_group()
+
 class AnimationSprite(Sprite):
 
-    def __init__(self, image_name, num_frame, position = (0, 0), fps = 6, repeat = True):
+    def __init__(self, image, num_frame, position = (0, 0), fps = 6, repeat = True):
         pygame.sprite.Sprite.__init__(self)
 
         self.num_frame = num_frame
@@ -282,7 +286,9 @@ class AnimationSprite(Sprite):
         self.repeat = repeat
         self.current_frame = 0
 
-        self.images = splitSurface(rpg.resource.image(image_name), num_frame)
+        if isinstance(image, basestring):
+            image = rpg.resource.image(image)
+        self.images = splitSurface(image, num_frame)
         self.image = self.images[self.current_frame]
         self.rect = self.image.get_rect().move(position)
 

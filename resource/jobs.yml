@@ -3,18 +3,22 @@
   label: 村人
   hp: 10
   skills:
-    - attack
+    - beat
     - defence
+  traits:
+    - villager
   description: |
-    やっかいごとはごめんだね
+    うでっぷしはそれなり
 
 -
   name: cat
   label: ねこ
-  hp: 6
+  hp: 3
   skills:
-    - attack
-    - defence
+    - watch
+  traits:
+    - recover_ep
+    - death_ep
   description: |
     魔女となかがいいらしい
 
@@ -32,7 +36,7 @@
   requires:
     - villager
   description: |
-    みならい魔法使い
+    いっぱしの魔法使いきどり
 
 -
   name: dragon

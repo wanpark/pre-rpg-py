@@ -14,6 +14,8 @@ class CursorSprite(rpg.sprite.Sprite):
         rpg.sprite.Sprite.__init__(self, 'cursor.png')
         self.margin = margin
         self.position = position
+        if self.position == 'right':
+            self.image = pygame.transform.flip(self.image, True, False)
 
     def point(self, sprite):
         if self.position == 'left':
@@ -35,8 +37,9 @@ class RadioGroup(rpg.sprite.Group):
     def add(self, *buttons):
         rpg.sprite.Group.add(self, *buttons)
         for button in buttons:
-            self._buttons.append(button)
-            button.radio_group = self
+            if isinstance(button, RadioButton):
+                self._buttons.append(button)
+                button.radio_group = self
 
     def empty(self):
         "dont use remove(sprite), instead use empty()"
@@ -46,8 +49,6 @@ class RadioGroup(rpg.sprite.Group):
         self.focused_button = None
 
     def buttons(self):
-        # Group.sprites() dont save order
-        # return self.sprites()
         return self._buttons
 
     def select(self, button, by_mouse = False, silence = False):

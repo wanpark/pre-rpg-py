@@ -253,15 +253,10 @@ class JobView(rpg.sprite.CompositeGroup):
 
         self.table = rpg.ui.RadioTable(cols = 3)
         for job in rpg.job.get_jobs():
-            modify_label = ''
-            if self.player.is_master(job):
-                modify_label = u'☆'
-            elif self.player.is_familiar(job):
-                modify_label = u'○'
             button = JobTableRadioButton(
                 job.label, pygame.rect.Rect(100, 150, 80, 20),
                 item = job, enabled = self.player.can_become(job),
-                modify_label = modify_label
+                learn_state = self.player.get_learn_state(job)
             )
             button.on_mouse_out = rpg.lang.empty_function
             self.table.add(button)
@@ -295,46 +290,51 @@ class JobView(rpg.sprite.CompositeGroup):
 
 
         for button in self.table.buttons():
-            button.set_highlight(False)
+            button.set_required(False)
         for req in job.requires:
-            self.table.button_for(req).set_highlight(True)
+            self.table.button_for(req).set_required(True)
 
 class JobTableRadioButton(rpg.ui.RadioButton):
     def __init__(self, *args, **kwargs):
-        self.modify_label = kwargs.pop('modify_label', '')
-        self.highlight = False
+        self.learn_state = kwargs.pop('learn_state', LEARN_STATE_NONE)
+        self.required = False
         super(JobTableRadioButton, self).__init__(*args, **kwargs)
 
-    def set_highlight(self, b):
-        if b != self.highlight:
-            self.highlight = b
+    def set_required(self, b):
+        if b != self.required:
+            self.required = b
             self.draw_image()
 
     def draw_image(self):
         self.image.fill((255, 255, 255))
-
-        fill_color = (255, 255, 255)
-        if self.highlight:
-            fill_color = COLOR_HIGHLIGHT
-            rpg.draw.rounded_rect(
-                self.image, self.image.get_rect().inflate(-2, -2),
-                fill_color = fill_color, border_color = fill_color
-            )
-
+ 
         if self.selected or self.focused:
             border_color = (0, 0, 0) if self.selected else COLOR_DISABLED
             rpg.draw.rounded_rect(
                 self.image, self.image.get_rect().inflate(-2, -2),
-                border_color = border_color, fill_color = fill_color
+                border_color = border_color
             )
-
+ 
         label_color = (0, 0, 0) if self.enabled else COLOR_DISABLED
         label_image = rpg.resource.font().render(self.label, False, label_color)
         self.image.blit(label_image, (5, (self.rect.height - label_image.get_rect().height) / 2))
+ 
+        modify_label = self.get_modifier_label()
+        if modify_label:
+            modify_color = COLOR_DISABLED if self.learn_state == LEARN_STATE_NONE else (0, 0, 0)
+            self.image.blit(
+                rpg.resource.font().render(modify_label, False, modify_color),
+                (5 + label_image.get_width(), (self.rect.height - label_image.get_rect().height) / 2)
+            )
 
-        modify_label = rpg.resource.font().render(self.modify_label, False, COLOR_DISABLED)
-        self.image.blit(modify_label, (5 + label_image.get_width(), (self.rect.height - label_image.get_rect().height) / 2))
-            
+    def get_modifier_label(self):
+        if self.learn_state == LEARN_STATE_MASTER:
+            return u'★' if self.required else u'☆'
+        elif self.learn_state == LEARN_STATE_FAMILIAR:
+            return u'●' if self.required else u'○'
+        elif self.required:
+            return u'●'
+        return ''            
 
 class SkillView(rpg.sprite.CompositeGroup):
     def __init__(self, player):

@@ -52,6 +52,9 @@ _traits = [
     Trait('magician', u'魔法攻撃+50%'),
     Trait('nerd', u'物理ダメージ+50%'),
     Trait('dragon', u'炎ダメージ-50%'),
+    Trait('recover_ep', u'毎ターンEP+1'),
+    Trait('death_ep', u'死亡時EP+5'),
+    Trait('villager', u'物理ダメージ+EP/2'),
 ]
 _traits_for_name = dict([(trait.name, trait) for trait in _traits])
 
