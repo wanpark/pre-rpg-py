@@ -68,7 +68,11 @@ class Character(rpg.event.EventDispatcher):
 
     def add_exp(self, exp, job = None):
         if not job: job = self.get_job()
+        old_level = self.get_level(job)
         self.total_exps[job] = self.get_total_exp(job) + exp
+        new_level = self.get_level(job)
+        for level in range(old_level, new_level):
+            self.add_leaned_skill(job.skill_for_level(level))
 
     def get_current_exp(self, job = None):
         if not job: job = self.get_job()
@@ -91,8 +95,13 @@ class Character(rpg.event.EventDispatcher):
     def get_learned_skills(self):
         return self.learned_skills
 
-    def add_skill(self, skill):
-        if self.can_add_skill():
+    def add_leaned_skill(self, skill):
+        if skill in self.learned_skills: return
+        self.learned_skills.append(skill)
+        self.add_active_learned_skill(skill)
+
+    def add_active_learned_skill(self, skill):
+        if self.can_add_skill() and skill in self.learned_skills:
             self.active_learned_skills.append(skill)
 
     def remove_skill(self, skill):
@@ -108,7 +117,7 @@ class Character(rpg.event.EventDispatcher):
         return 4
 
     def get_skills(self):
-        return self.get_job().available_skills(self.get_total_exp()) + self.get_active_learned_skills()
+        return rpg.lang.uniquify(self.get_job().available_skills(self.get_total_exp()) + self.get_active_learned_skills())
 
     def get_commands(self):
         return [skill.create_command(self) for skill in self.get_skills() if skill.is_command]

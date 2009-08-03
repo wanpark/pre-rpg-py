@@ -9,6 +9,15 @@ def exists_in(seq, element):
             return True
     return False
 
+def uniquify(seq):
+    seen = set()
+    result = []
+    for item in seq:
+        if item in seen: continue
+        seen.add(item)
+        result.append(item)
+    return result
+
 class Singleton(object):
     @classmethod
     def instance(cls, *args, **kwargs):

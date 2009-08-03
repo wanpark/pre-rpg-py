@@ -32,6 +32,13 @@ class Job(object):
         if level >= len(self.skills): return 0
         return self.skills[level].exp
 
+    def total_exp_for_level(self, level):
+        if level >= len(self.skills): level = len(self.skills) - 1
+        exp = 0
+        for i in range(level):
+            exp += self.skills[level].exp
+        return exp
+
     def skill_for_level(self, level):
         return self.skills[level]
 
@@ -57,7 +64,7 @@ _traits = [
     Trait('dragon', u'炎ダメージ-50%'),
     Trait('recover_ep', u'毎ターンEP+1'),
     Trait('death_ep', u'死亡時EP+5'),
-    Trait('villager', u'物理ダメージ+EP/2'),
+    Trait('villager', u'物理攻撃+EP/2'),
 ]
 _traits_for_name = dict([(trait.name, trait) for trait in _traits])
 

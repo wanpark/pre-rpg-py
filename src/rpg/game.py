@@ -332,9 +332,6 @@ class TurnEndController(rpg.scene.CoroutineController):
 
 class WinController(rpg.scene.CoroutineController):
     def update_generator(self):
-        self.add_event_listener(KEYDOWN, self.on_key_down)
-        self.add_event_listener(MOUSEBUTTONUP, self.on_click)
-
         for enemy in rpg.model.get_stage().get_enemies():
             while self.view(enemy).is_transforming(): yield
 
@@ -348,8 +345,12 @@ class WinController(rpg.scene.CoroutineController):
                 sprite,
                 sprite.rect.topleft,
                 (- sprite.rect.width, sprite.rect.top),
-                500
+                500,
+                on_finish = lambda e, enemy = enemy: self.scene.remove_view_for(enemy)
             )
+
+        self.add_event_listener(KEYDOWN, self.on_key_down)
+        self.add_event_listener(MOUSEBUTTONUP, self.on_click)
 
         old_levels = [player.get_level() for player in rpg.model.get_stage().get_players()]
 
@@ -365,15 +366,16 @@ class WinController(rpg.scene.CoroutineController):
                 message.append(u'マスター！')
             else:
                 message.append(u'レベルアップ！')
-            message.append(player.get_job().skill_for_level(old_level).label + u'を習得')
-            if new_level == 1:
+            for level in range(old_level, new_level):
+                message.append(player.get_job().skill_for_level(level).label + u'を習得')
+            if old_level == 0:
                 for job in rpg.job.get_jobs():
                     if player.get_job() in job.requires and player.can_become(job):
                         message.append(job.label + u'になれる')
 
         while messages:
             for player, message in messages.items():
-                serif = rpg.sprite.Sprite(rpg.resource.font(small = True).render(message.pop(0), False, COLOR_DISABLED))
+                serif = rpg.sprite.Sprite(rpg.resource.font(small = True).render(message.pop(0), False, COLOR_FOREGROUND))
                 serif.rect.midbottom = self.view(player).sprite.rect.midbottom
                 serif.rect.top -= 60
                 self.add_view(serif)

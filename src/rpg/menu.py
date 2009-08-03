@@ -115,7 +115,7 @@ class MenuScene(rpg.scene.Scene):
         self.skill_view.update_info()
 
     def on_skill_select(self, event):
-        self.player.add_skill(event.button.item)
+        self.player.add_active_learned_skill(event.button.item)
         self.skill_view.update_remain_label()
 
     def on_skill_unselect(self, event):

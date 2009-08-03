@@ -6,6 +6,7 @@ from pygame.locals import *
 from rpg.constants import *
 import rpg.resource
 import rpg.event
+import rpg.lang
 
 def sprites_from_groups(groups):
     return reduce(lambda sprites, group: sprites + group.sprites(), groups, [])
@@ -348,11 +349,12 @@ def splitSurface(surface, num):
 
 
 class Translate(object):
-    def __init__(self, sprite, from_pos, to_pos, duration):
+    def __init__(self, sprite, from_pos, to_pos, duration, on_finish = rpg.lang.empty_function):
         self.sprite = sprite
         self.from_pos = from_pos
         self.to_pos = to_pos
         self.duration = duration
+        self.on_finish = on_finish
 
         self.start_time = pygame.time.get_ticks()
         self._is_finished = False
@@ -377,6 +379,7 @@ class Translate(object):
         if ratio >= 1:
             self.sprite.update = self.sprite_update
             self._is_finished = True
+            self.on_finish(rpg.event.Event(target = self))
 
     def is_finished(self):
         return self._is_finished
