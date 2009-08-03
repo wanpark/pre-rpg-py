@@ -6,7 +6,8 @@ import rpg.stage
 
 _players = []
 _enemies = []
-_stage = []
+
+_stage = None
 
 def init():
     rpg.model._players = [
@@ -14,11 +15,7 @@ def init():
         rpg.character.Player(1, 'girl', rpg.job.get_job('villager'), SEX_FEMALE),
         rpg.character.Player(2, 'ninja', rpg.job.get_job('villager'), SEX_MALE)
     ]
-    rpg.model._stage  = rpg.stage.Stage([
-        rpg.character.Enemy(0, rpg.job.get_job('villager'), SEX_FEMALE),
-        rpg.character.Enemy(1, rpg.job.get_job('villager'), SEX_MALE),
-        rpg.character.Enemy(2, rpg.job.get_job('villager'), SEX_FEMALE),
-    ])
+    rpg.model._stage  = rpg.stage.Stage1_1()
 
 
 def get_players():
@@ -35,3 +32,6 @@ def prev_player(next_player):
 
 def get_stage():
     return _stage
+
+def next_stage():
+    rpg.model._stage  = rpg.stage.Stage1_1()

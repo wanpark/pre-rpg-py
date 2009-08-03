@@ -3,6 +3,7 @@
 import functional
 from rpg.constants import *
 import rpg.model
+import rpg.job
 
 class Stage(object):
 
@@ -15,6 +16,10 @@ class Stage(object):
         "call before battle start"
         for character in self.get_characters():
             character.clear_parameters()
+
+    def finalize(self):
+        for player in self.get_players():
+            player.add_exp(1)
 
     def get_enemies(self):
         return self.enemies
@@ -44,7 +49,7 @@ class Stage(object):
         'dont call if self.is_end() == True'
         if not character: character = self.actor
 
-        if character.is_player():
+        if character.is_player() and character.index < len(self.get_enemies()):
             actor = self.get_enemies()[character.index]
         else:
             actor = self.get_players()[(character.index + 1) % len(self.get_players())]
@@ -69,12 +74,32 @@ class Stage(object):
     def is_loose(self):
         return functional.all(self.get_players(), lambda c: not c.is_alive())
 
-    def create_command(self):
-        if not self.actor.is_enemy(): return None
-
-        command = rpg.skill.get_skill('beat').create_command(self.actor)
-        command.set_targets([self.get_players()[0]])
-        return command
-
     def get_ep(self, team):
         return self.eps[team]
+
+    def create_command(self):
+        "override in subclass"
+        pass
+
+
+class Stage1_1(Stage):
+    def __init__(self):
+        super(Stage1_1, self).__init__([
+            #rpg.character.Enemy(0, rpg.job.get_job('villager'), SEX_FEMALE),
+            #rpg.character.Enemy(1, rpg.job.get_job('villager'), SEX_MALE),
+            rpg.character.Enemy(0, rpg.job.get_job('cat'), SEX_FEMALE),
+        ])
+
+    def create_command(self):
+        command = rpg.skill.get_skill('beat').create_command(self.get_actor())
+        command.set_targets([self.get_target()])
+        return command
+
+    def get_target(self):
+        players = [player for player in self.get_players() if player.is_alive()]
+
+        for player in players:
+            if player.get_job() is rpg.job.get_job('villager'):
+                return player
+
+        return players[0]

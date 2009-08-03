@@ -246,7 +246,7 @@ class Sprite(pygame.sprite.Sprite):
         if image:
             self.image = image
         if rect:
-            self.rect = rect
+            self.rect = Rect(rect)
         elif image:
             self.rect = image.get_rect()
 
@@ -294,6 +294,10 @@ class AnimationSprite(Sprite):
 
         self.start()
 
+    def flip(self):
+        self.images = [pygame.transform.flip(image, True, False) for image in self.images]
+        self.image = self.images[self.current_frame]
+
     def stop(self):
         self.playing = False
 
@@ -325,7 +329,6 @@ class AnimationSprite(Sprite):
             else:
                 self.last_frame_tick += ms_per_frame * (frame - self.current_frame)
                 self.set_current_frame(frame % self.num_frame)
-            
 
     def set_current_frame(self, frame):
         self.current_frame = frame

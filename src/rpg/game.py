@@ -32,6 +32,9 @@ class IntervalController(rpg.scene.CoroutineController):
 
     def update_generator(self):
         for player in rpg.model.get_players():
+            while self.view(player).is_transforming(): yield
+
+        for player in rpg.model.get_players():
             sprite = self.view(player).intermission_sprite
             sprite.on_click = lambda e, p=player: self.open_menu(p)
             sprite.on_mouse_over = lambda e, p=player: self.select_player(p)
@@ -263,7 +266,8 @@ class TargetSelectController(rpg.scene.Controller):
             friends = self.get_friends()
             self.focus(friends[(self.focused_character.index + 1) % len(friends)])
         elif rpg.event.is_key_down(K_RIGHT, K_LEFT):
-            self.focus(self.get_rivals()[self.focused_character.index])
+            rivals = self.get_rivals()
+            self.focus(rivals[min([self.focused_character.index, len(rivals) - 1])])
 
     def on_mouse_click(self, event):
         if event.button == MOUSE_BUTTON_RIGHT:
@@ -316,7 +320,7 @@ class TurnEndController(rpg.scene.CoroutineController):
 
         if rpg.model.get_stage().is_end():
             if rpg.model.get_stage().is_win():
-                pass
+                self.scene.set_controller(WinController(self.scene))
             else:
                 pass
         else:
@@ -326,13 +330,83 @@ class TurnEndController(rpg.scene.CoroutineController):
             else:
                 self.scene.set_controller(CommandSelectController(self.scene))
 
+class WinController(rpg.scene.CoroutineController):
+    def update_generator(self):
+        self.add_event_listener(KEYDOWN, self.on_key_down)
+        self.add_event_listener(MOUSEBUTTONUP, self.on_click)
+
+        for enemy in rpg.model.get_stage().get_enemies():
+            while self.view(enemy).is_transforming(): yield
+
+        for enemy in rpg.model.get_stage().get_enemies():
+            view = self.view(enemy)
+            sprite = view.intermission_sprite
+            sprite.fps = 20
+            sprite.flip()
+            view.walk()
+            rpg.sprite.Translate(
+                sprite,
+                sprite.rect.topleft,
+                (- sprite.rect.width, sprite.rect.top),
+                500
+            )
+
+        old_levels = [player.get_level() for player in rpg.model.get_stage().get_players()]
+
+        rpg.model.get_stage().finalize()
+
+        messages = {}
+        for player, old_level in zip(rpg.model.get_stage().get_players(), old_levels):
+            message = []
+            new_level = player.get_level()
+            if new_level <= old_level: continue
+            messages[player] = message
+            if player.is_master():
+                message.append(u'マスター！')
+            else:
+                message.append(u'レベルアップ！')
+            message.append(player.get_job().skill_for_level(old_level).label + u'を習得')
+            if new_level == 1:
+                for job in rpg.job.get_jobs():
+                    if player.get_job() in job.requires and player.can_become(job):
+                        message.append(job.label + u'になれる')
+
+        while messages:
+            for player, message in messages.items():
+                serif = rpg.sprite.Sprite(rpg.resource.font(small = True).render(message.pop(0), False, COLOR_DISABLED))
+                serif.rect.midbottom = self.view(player).sprite.rect.midbottom
+                serif.rect.top -= 60
+                self.add_view(serif)
+                if not message: del messages[player]
+            for i in self.wait_generator(1000): yield
+            self.remove_all_views()
+
+    def finish(self):
+        self.remove_all_views()
+        for player in rpg.model.get_stage().get_players():
+            self.view(player).untransform()
+        rpg.model.next_stage()
+        self.scene.set_controller(IntervalController(self.scene))
+
+    def on_key_down(self, event):
+        if event.key in OK_KEYS or event.key in CANCEL_KEYS:
+            self.finish()
+
+    def on_click(self, event):
+        self.finish()
 
 def get_command_effect_controller(scene, command):
-    controller_cls = getattr(sys.modules['rpg.game'], command.name.capitalize() + 'CommandEffectController')
-    controller =  controller_cls(scene)
+    controller_cls = getattr(
+        sys.modules['rpg.game'], command.name.capitalize() + 'CommandEffectController',
+        DefaultCommandEffectController
+    )
+    controller = controller_cls(scene)
     controller.command = command
     return controller
 
+class DefaultCommandEffectController(rpg.scene.Controller):
+    def update(self):
+        self.scene.set_controller(TurnEndController(self.scene))
 
 class BeatCommandEffectController(rpg.scene.CoroutineController):
     def update_generator(self):

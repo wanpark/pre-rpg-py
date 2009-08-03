@@ -110,13 +110,41 @@ class Controller(EventListenable):
     def __init__(self, scene):
         super(Controller, self).__init__()
         self.scene = scene
-        self.event_listeners = {}
+        self.views = set()
+        self.enabled = False
 
     def update(self):
         pass
 
     def view(self, key):
         return self.scene.get_view_for(key)
+
+
+    def add_view(self, view):
+        self.views.add(view)
+        if self.enabled:
+            self.scene.add_view(view)
+
+    def remove_view(self, view):
+        self.views.remove(view)
+        if self.enabled:
+            self.scene.remove_view(view)
+
+    def remove_all_views(self):
+        for view in list(self.views):
+            self.remove_view(view)
+
+    def enable(self):
+        super(Controller, self).enable()
+        for view in self.views:
+            self.scene.add_view(view)
+        self.enabled = True
+
+    def disable(self):
+        super(Controller, self).disable()
+        for view in self.views:
+            self.scene.remove_view(view)
+        self.enabled = False
 
 
 class CoroutineController(Controller):

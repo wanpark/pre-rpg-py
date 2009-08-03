@@ -32,6 +32,9 @@ class Job(object):
         if level >= len(self.skills): return 0
         return self.skills[level].exp
 
+    def skill_for_level(self, level):
+        return self.skills[level]
+
     def max_level(self):
         return len(self.skills)
 

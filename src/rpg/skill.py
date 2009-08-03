@@ -13,7 +13,7 @@ class Skill(object):
 
     def create_command(self, actor):
         if not self.is_command: return None
-        command_cls = getattr(sys.modules['rpg.skill'], self.name.capitalize() + 'Command')
+        command_cls = getattr(sys.modules['rpg.skill'], self.name.capitalize() + 'Command', DefaultCommand)
         command = command_cls()
         command.set_name(self.name)
         command.set_label(self.label)
@@ -42,6 +42,10 @@ class Command(object):
     def do(self):
         pass
 
+class DefaultCommand(Command):
+    def __init__(self):
+        super(DefaultCommand, self).__init__(TARGET_ONE) 
+
 
 class BeatCommand(Command):
     def __init__(self):
@@ -52,6 +56,12 @@ class BeatCommand(Command):
 class WatchCommand(Command):
     def __init__(self):
         super(WatchCommand, self).__init__(TARGET_NONE) 
+    def do(self):
+        pass
+
+class DefenceCommand(Command):
+    def __init__(self):
+        super(DefenceCommand, self).__init__(TARGET_NONE) 
     def do(self):
         pass
 

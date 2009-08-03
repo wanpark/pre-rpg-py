@@ -66,6 +66,10 @@ class Character(rpg.event.EventDispatcher):
         if not job: job = self.get_job()
         return self.total_exps.get(job, 0)
 
+    def add_exp(self, exp, job = None):
+        if not job: job = self.get_job()
+        self.total_exps[job] = self.get_total_exp(job) + exp
+
     def get_current_exp(self, job = None):
         if not job: job = self.get_job()
         return job.current_exp_for_exp(self.get_total_exp(job))
@@ -243,12 +247,14 @@ class CharacterView(rpg.sprite.Group):
         self.stand()
         self.empty()
         self.add(self.transform_sprite)
+        self.transform_sprite.reset()
         self.transform_sprite.start(self._finish_transforming)
         self._is_transforming = True
 
     def untransform(self):
         self.empty()
         self.add(self.untransform_sprite)
+        self.untransform_sprite.reset()
         self.untransform_sprite.start(self._finish_untransforming)
         self._is_transforming = True
 
