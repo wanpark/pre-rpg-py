@@ -4,10 +4,14 @@ import functional
 from rpg.constants import *
 import rpg.model
 import rpg.job
+import rpg.event
 
-class Stage(object):
+EP_CHANGED = 'ep_changed'
+
+class Stage(rpg.event.EventDispatcher):    
 
     def __init__(self, enemies):
+        super(Stage, self).__init__()
         self.enemies = enemies
         self.actor = self.get_players()[0]
         self.eps = { TEAM_PLAYER: 0, TEAM_ENEMY: 0 }
@@ -76,6 +80,11 @@ class Stage(object):
 
     def get_ep(self, team):
         return self.eps[team]
+
+    def set_ep(self, team, ep):
+        if self.get_ep(team) == ep: return
+        self.eps[team] = ep
+        self.dispatch(EP_CHANGED, stage=self, team=team)
 
     def create_command(self):
         "override in subclass"

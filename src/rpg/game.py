@@ -108,6 +108,7 @@ class IntervalController(rpg.scene.CoroutineController):
         rpg.model.get_stage().init()
         for character in rpg.model.get_stage().get_characters():
             self.scene.get_view_for(character).show_parameters()
+        self.scene.add_view_for('ep', EpView())
 
 
 class CommandSelectController(rpg.scene.Controller):
@@ -387,6 +388,7 @@ class WinController(rpg.scene.CoroutineController):
         self.remove_all_views()
         for player in rpg.model.get_stage().get_players():
             self.view(player).untransform()
+        self.scene.remove_view_for('ep')
         rpg.model.next_stage()
         self.scene.set_controller(IntervalController(self.scene))
 
@@ -446,3 +448,34 @@ class WatchCommandEffectController(rpg.scene.CoroutineController):
         for i in self.wait_generator(200): yield
 
         self.scene.set_controller(TurnEndController(self.scene))
+
+
+class EpView(rpg.sprite.Group):
+    def __init__(self):
+        super(EpView, self).__init__()
+        self.enemy_ep = rpg.sprite.Sprite(pygame.Surface((40, 15)))
+        self.enemy_ep.rect.topleft = (10, 5)
+        self.add(self.enemy_ep)
+
+        self.player_ep = rpg.sprite.Sprite(pygame.Surface((40, 15)))
+        self.player_ep.rect.topright = (SCREEN_RECT.width - self.enemy_ep.rect.left, self.enemy_ep.rect.top)
+        self.add(self.player_ep)
+
+        self.draw_ep()
+
+        rpg.model.get_stage().add_event_listener(rpg.stage.EP_CHANGED, self.on_ep_change)
+
+    def draw_ep(self):
+        self.draw_team_ep(TEAM_PLAYER)
+        self.draw_team_ep(TEAM_ENEMY)
+
+    def on_ep_change(self, event):
+        self.draw_team_ep(event.team)
+
+    def draw_team_ep(self, team):
+        sprite = self.player_ep if team == TEAM_PLAYER else self.enemy_ep
+
+        sprite.image.fill(COLOR_BACKGROUND)
+        label = rpg.resource.font().render('%d' % rpg.model.get_stage().get_ep(team), False, COLOR_FOREGROUND)
+        sprite.image.blit(label, (0, 0))
+
