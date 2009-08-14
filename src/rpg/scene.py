@@ -64,6 +64,9 @@ class Scene(EventListenable, rpg.lang.Singleton):
         dirties = self.group.draw(screen)
         pygame.display.update(dirties)
 
+    def get_controller(self):
+        return self.controller
+
     def set_controller(self, controller):
         if controller == self.controller: return
         if self.controller:

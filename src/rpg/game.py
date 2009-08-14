@@ -121,7 +121,14 @@ class CommandSelectController(rpg.scene.Controller):
         self.select_box = CommandSelectBox(self.character, self.scene.get_view_for(self.character))
         self.select_box.on_focus = self.on_focus_command
         self.select_box.on_select = self.on_select_command
-        self.select_box.focus(self.select_box.buttons()[0])
+
+        # focus on first enabled button
+        for button in self.select_box.buttons():
+            if button.enabled:
+                self.select_box.focus(button)
+                break
+        else:
+            self.select_box.focus(self.select_box.buttons()[0])
 
     def enable(self):
         super(CommandSelectController, self).enable()
@@ -135,19 +142,31 @@ class CommandSelectController(rpg.scene.Controller):
 
     def on_focus_command(self, event):
         self.scene.cursor.point(event.button)
+        self.view('ep').show_ep_change(self.character.get_team(), - event.button.item.get_ep_cost())
 
     def on_select_command(self, event):
         self.command = event.button.item
         self.scene.set_controller(TargetSelectController(
             self.scene, self.command.get_target_type(),
-            self.on_select_target, self.on_cancel_target
+            self.on_select_target, self.on_cancel_target,
+            self.on_focus_target, self.on_unfocus_target
         ))
+
+    def on_focus_target(self, targets):
+        self.command.set_targets(targets)
+        for target, damage in self.command.get_damages().iteritems():
+            self.view(target).show_hp_change(-damage)
+
+    def on_unfocus_target(self, targets):
+        for target in targets:
+            self.view(target).hide_hp_change()
 
     def on_select_target(self, targets):
         self.command.set_targets(targets)
         self.scene.set_controller(CommandExecuteController(self.scene, self.command))
 
     def on_cancel_target(self):
+        self.on_unfocus_target(self.scene.get_controller().get_focused_characters())
         self.scene.set_controller(self)
 
     def update(self):
@@ -172,7 +191,7 @@ class CommandSelectBox(rpg.ui.RadioTable):
 
         self.box = rpg.sprite.Sprite(pygame.Surface((105, 3 + 22 * len(commands))))
         self.box.image.fill(COLOR_BACKGROUND)
-        rpg.draw.rounded_rect(self.box.image, self.box.rect.inflate(-1, -1))
+        rpg.draw.rounded_rect(self.box.image, self.box.rect)
         if view.is_flipped():
             self.box.rect.midright = view.sprite.rect.center
             self.box.rect.left -= 30
@@ -182,7 +201,12 @@ class CommandSelectBox(rpg.ui.RadioTable):
         self.add(self.box)
 
         for command in commands:
-            button = rpg.ui.RadioButton(command.label, Rect(self.box.rect.left + 20, self.box.rect.top + 2, 80, 20), command)
+            button = rpg.ui.RadioButton(
+                command.label,
+                Rect(self.box.rect.left + 20, self.box.rect.top + 2, 80, 20),
+                item = command,
+                enabled = command.can_do()
+            )
             button.focus = rpg.lang.empty_function  # disable focus rect
             button.select = rpg.lang.empty_function  # disable select rect
             button.on_mouse_out = rpg.lang.empty_function  # disable unselect
@@ -191,12 +215,14 @@ class CommandSelectBox(rpg.ui.RadioTable):
 class TargetSelectController(rpg.scene.Controller):
     def __init__(
         self, scene, target_type,
-        on_select = rpg.lang.empty_function, on_cancel = rpg.lang.empty_function, on_focus = rpg.lang.empty_function
+        on_select = rpg.lang.empty_function, on_cancel = rpg.lang.empty_function,
+        on_focus = rpg.lang.empty_function, on_unfocus = rpg.lang.empty_function
     ):
         super(TargetSelectController, self).__init__(scene)
         self.on_select = on_select
         self.on_cancel = on_cancel
         self.on_focus = on_focus
+        self.on_unfocus = on_unfocus
         self.focused_character = None
 
         self.cursors = {}
@@ -208,21 +234,26 @@ class TargetSelectController(rpg.scene.Controller):
 
         self.add_event_listener(MOUSEBUTTONUP, self.on_mouse_click)
 
-    def get_nearlest_alive_character(self, character):
+    def get_nearlest_alive_character(self, character, next = True):
         if character.is_alive():
             return character
         friends = rpg.model.get_stage().get_friends(character)
-        return self.get_nearlest_alive_character(friends[(character.index + 1) % len(friends)])
+        diff = 1 if next else -1
+        return self.get_nearlest_alive_character(friends[(character.index + diff) % len(friends)], next)
 
-    def focus(self, character):
-        character = self.get_nearlest_alive_character(character)
+    def focus(self, character, next = True):
+        character = self.get_nearlest_alive_character(character, next)
         if self.focused_character:
+            self.on_unfocus([self.focused_character])
             self.scene.remove_view(self.get_cursor(self.focused_character))
 
         self.focused_character = character
         self.scene.add_view(self.get_cursor(self.focused_character))
 
-        self.on_focus(character)
+        self.on_focus([character])
+
+    def get_focused_characters(self):
+        return [self.focused_character]
 
     def select(self, character):
         character = self.get_nearlest_alive_character(character)
@@ -262,7 +293,7 @@ class TargetSelectController(rpg.scene.Controller):
                 self.select(self.focused_character)
         if rpg.event.is_key_down(K_UP):
             friends = self.get_friends()
-            self.focus(friends[(self.focused_character.index - 1) % len(friends)])
+            self.focus(friends[(self.focused_character.index - 1) % len(friends)], next = False)
         elif rpg.event.is_key_down(K_DOWN):
             friends = self.get_friends()
             self.focus(friends[(self.focused_character.index + 1) % len(friends)])
@@ -306,7 +337,7 @@ class CommandExecuteController(rpg.scene.CoroutineController):
     def create_serif(self):
         serif = rpg.sprite.Sprite(pygame.Surface((105, 20)))
         serif.image.fill(COLOR_BACKGROUND)
-        rpg.draw.rounded_rect(serif.image, serif.rect.inflate(-1, -1))
+        rpg.draw.rounded_rect(serif.image, serif.rect)
         serif.image.blit(rpg.resource.font().render(self.command.label, False, COLOR_FOREGROUND), (5, 3))
         serif.rect.midleft = self.scene.get_view_for(self.command.actor).sprite.rect.center
         serif.rect.left += 30
@@ -453,13 +484,15 @@ class WatchCommandEffectController(rpg.scene.CoroutineController):
 class EpView(rpg.sprite.Group):
     def __init__(self):
         super(EpView, self).__init__()
-        self.enemy_ep = rpg.sprite.Sprite(pygame.Surface((40, 15)))
+        self.enemy_ep = rpg.sprite.Sprite(pygame.Surface((80, 15)))
         self.enemy_ep.rect.topleft = (10, 5)
         self.add(self.enemy_ep)
 
-        self.player_ep = rpg.sprite.Sprite(pygame.Surface((40, 15)))
+        self.player_ep = rpg.sprite.Sprite(pygame.Surface(self.enemy_ep.image.get_size()))
         self.player_ep.rect.topright = (SCREEN_RECT.width - self.enemy_ep.rect.left, self.enemy_ep.rect.top)
         self.add(self.player_ep)
+
+        self.ep_changes = { TEAM_PLAYER: 0, TEAM_ENEMY: 0 }
 
         self.draw_ep()
 
@@ -474,8 +507,25 @@ class EpView(rpg.sprite.Group):
 
     def draw_team_ep(self, team):
         sprite = self.player_ep if team == TEAM_PLAYER else self.enemy_ep
+        font = rpg.resource.font(small = True)
 
         sprite.image.fill(COLOR_BACKGROUND)
-        label = rpg.resource.font().render('%d' % rpg.model.get_stage().get_ep(team), False, COLOR_FOREGROUND)
+        label = font.render('EP %d' % rpg.model.get_stage().get_ep(team), False, COLOR_FOREGROUND)
         sprite.image.blit(label, (0, 0))
 
+        change = self.ep_changes[team]
+        if change != 0:
+            change_label = font.render(' %s %d' % ('+' if change > 0 else '-', abs(change)), False, COLOR_USE_EP)
+            sprite.image.blit(change_label, (label.get_width(), 0))
+
+    def show_ep_change(self, team, ep):
+        self.ep_changes[team] = ep
+        self.draw_team_ep(team)
+
+    def hide_ep_change(self, team = None):
+        if team:
+            self.ep_changes[team] = 0
+            self.draw_team_ep(team)
+        else:
+            self.ep_changes = { TEAM_PLAYER: 0, TEAM_ENEMY: 0 }
+            self.draw_ep()

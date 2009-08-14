@@ -2,6 +2,7 @@
 
 import sys
 from rpg.constants import *
+import rpg.model
 
 class Skill(object):
     def __init__(self, name, label, exp, is_command, description):
@@ -21,8 +22,9 @@ class Skill(object):
         return command
 
 class Command(object):
-    def __init__(self, target_type):
+    def __init__(self, target_type, ep_cost = 0):
         self.target_type = target_type
+        self.ep_cost = ep_cost
 
     def get_target_type(self):
         return self.target_type
@@ -39,29 +41,49 @@ class Command(object):
     def set_targets(self, targets):
         self.targets = targets
 
+    def get_ep_cost(self):
+        return self.ep_cost
+
+    def get_stage(self):
+        return rpg.model.get_stage()
+
+    def get_damages(self):
+        return {}
+
+    def can_do(self):
+        return self.get_ep_cost() <= self.get_stage().get_ep(self.actor.get_team())
+
     def do(self):
-        pass
+        for target, damage in self.get_damages().iteritems():
+            target.damage(damage)
 
 class DefaultCommand(Command):
     def __init__(self):
-        super(DefaultCommand, self).__init__(TARGET_ONE) 
+        super(DefaultCommand, self).__init__(TARGET_ONE)
 
 
 class BeatCommand(Command):
     def __init__(self):
-        super(BeatCommand, self).__init__(TARGET_ONE) 
-    def do(self):
-        self.targets[0].damage(3)
+        super(BeatCommand, self).__init__(TARGET_ONE)
+
+    def get_damages(self):
+        return dict([(target, 3) for target in self.targets])
 
 class WatchCommand(Command):
     def __init__(self):
-        super(WatchCommand, self).__init__(TARGET_NONE) 
+        super(WatchCommand, self).__init__(TARGET_NONE)
     def do(self):
         pass
 
 class DefenceCommand(Command):
     def __init__(self):
-        super(DefenceCommand, self).__init__(TARGET_NONE) 
+        super(DefenceCommand, self).__init__(TARGET_NONE)
+    def do(self):
+        pass
+
+class FireCommand(Command):
+    def __init__(self):
+        super(FireCommand, self).__init__(TARGET_NONE, ep_cost = 3)
     def do(self):
         pass
 

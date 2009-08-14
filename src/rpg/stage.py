@@ -94,9 +94,9 @@ class Stage(rpg.event.EventDispatcher):
 class Stage1_1(Stage):
     def __init__(self):
         super(Stage1_1, self).__init__([
-            #rpg.character.Enemy(0, rpg.job.get_job('villager'), SEX_FEMALE),
-            #rpg.character.Enemy(1, rpg.job.get_job('villager'), SEX_MALE),
-            rpg.character.Enemy(0, rpg.job.get_job('cat'), SEX_FEMALE),
+            rpg.character.Enemy(0, rpg.job.get_job('villager'), SEX_FEMALE),
+            rpg.character.Enemy(1, rpg.job.get_job('villager'), SEX_MALE),
+            rpg.character.Enemy(2, rpg.job.get_job('cat'), SEX_FEMALE),
         ])
 
     def create_command(self):

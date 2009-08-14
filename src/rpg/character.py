@@ -139,7 +139,7 @@ class Character(rpg.event.EventDispatcher):
         if self.hp < 0:
             self.hp = 0
         if self.hp != old_hp:
-            self.dispatch(self.DAMAGED, damage = old_hp - self.hp)
+            self.dispatch(self.DAMAGED, hp_before_damage = old_hp, damage = n)
 
 class Player(Character):
     def __init__(self, index, name, job, sex):
@@ -162,6 +162,8 @@ class CharacterView(rpg.sprite.Group):
 
         # for battle
         self.current_damage = 0
+        self.hp_before_damage = 0
+        self.hp_change = 0
 
         self.sprite = rpg.sprite.Sprite()
         self.on_job_change()
@@ -203,11 +205,21 @@ class CharacterView(rpg.sprite.Group):
 
     def on_damaged(self, event):
         self.current_damage = event.damage
+        self.hp_before_damage = event.hp_before_damage
+        self.hp_change = 0
         self.update_parameters()
 
+    def show_hp_change(self, change):
+        self.hp_change = change
+        self.update_parameters()
+
+    def hide_hp_change(self):
+        self.show_hp_change(0)
+
     def refresh(self):
-        if self.current_damage:
+        if self.current_damage or self.hp_change:
             self.current_damage = 0
+            self.hp_change = 0
             self.update_parameters()
         if not self.character.is_alive() and self.sprite.is_displayed():
             self.untransform()
@@ -226,24 +238,37 @@ class CharacterView(rpg.sprite.Group):
         hp_bar_width = 30
         hp_bar_y = image.get_height() - 1
         pygame.draw.line(image, COLOR_MAX_HP, (0, hp_bar_y), (hp_bar_width, hp_bar_y))
-        if self.current_damage:
-            hp_lost_rate = float(self.character.get_hp() + self.current_damage) / self.character.get_max_hp()
-            pygame.draw.line(image, COLOR_LOST_HP, (0, hp_bar_y), (math.floor(hp_lost_rate * hp_bar_width), hp_bar_y))
-        if self.character.get_hp():
-            hp_remain_rate = float(self.character.get_hp()) / self.character.get_max_hp()
-            pygame.draw.line(image, COLOR_REMAIN_HP, (0, hp_bar_y), (math.floor(hp_remain_rate * hp_bar_width), hp_bar_y))
 
         displayed_hp = self.character.get_hp()
-        if self.current_damage:
-            displayed_hp += self.current_damage
+
+        # if self.hp_change > 0
+
+        damage = self.current_damage
+        damage_color = COLOR_LOST_HP
+        if damage:
+            displayed_hp = self.hp_before_damage
+            damage_color = COLOR_LOST_HP
+        elif self.hp_change < 0:
+            damage = - self.hp_change
+            damage_color = COLOR_WILL_LOST_HP
+
+        if damage:
+            hp_lost_rate = float(displayed_hp) / self.character.get_max_hp()
+            pygame.draw.line(image, damage_color, (0, hp_bar_y), (math.floor(hp_lost_rate * hp_bar_width), hp_bar_y))
+
+        if displayed_hp > damage:
+            hp_remain_rate = float(displayed_hp - damage) / self.character.get_max_hp()
+            pygame.draw.line(image, COLOR_REMAIN_HP, (0, hp_bar_y), (math.floor(hp_remain_rate * hp_bar_width), hp_bar_y))
+
         hp_label = rpg.resource.font(small = True).render('%d' % displayed_hp, False, COLOR_FOREGROUND)
         image.blit(hp_label, (0, hp_bar_y - 11))
-        if self.current_damage:
+
+        if damage:
             image.blit(
-                rpg.resource.font(small = True).render(' - %d' % self.current_damage, False, COLOR_LOST_HP),
+                rpg.resource.font(small = True).render(' - %d' % damage, False, damage_color),
                 (hp_label.get_width(), hp_bar_y - 11)
             )
-
+        # elif self.hp_change > 0
 
     def walk(self):
         self.intermission_sprite.set_current_frame(1)

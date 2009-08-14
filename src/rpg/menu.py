@@ -211,7 +211,7 @@ class SkillController(rpg.scene.Controller):
             else:
                 self.target_table.focus(next_button)
         elif rpg.event.is_key_down(K_DOWN):
-            next_button = self.target_table.up_button(self.target_table.focused_button, loop = False)
+            next_button = self.target_table.down_button(self.target_table.focused_button, loop = False)
             if self.target_table == self.scene.skill_view.job_table and next_button == self.target_table.focused_button:
                 if len(self.scene.skill_view.skill_table.buttons()):
                     self.target_table.unfocus()
