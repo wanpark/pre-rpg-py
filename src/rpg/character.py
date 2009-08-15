@@ -131,6 +131,9 @@ class Character(rpg.event.EventDispatcher):
     def get_team(self):
         return TEAM_PLAYER if self.is_player() else TEAM_ENEMY
 
+    def get_rival_team(self):
+        return TEAM_ENEMY if self.is_player() else TEAM_PLAYER
+
     def damage(self, n):
         if n <= 0: return
 

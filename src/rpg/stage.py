@@ -13,11 +13,11 @@ class Stage(rpg.event.EventDispatcher):
     def __init__(self, enemies, first_team):
         super(Stage, self).__init__()
         self.enemies = enemies
-        self.actors = {
-            TEAM_PLAYER: self.get_players()[0],
-            TEAM_ENEMY: self.get_enemies()[0]
+        self.actor = self.get_characters(first_team)[0]
+        self.last_actors = {
+            TEAM_PLAYER: None,
+            TEAM_ENEMY: None
         }
-        self.actor = self.actors[first_team]
         self.eps = { TEAM_PLAYER: 0, TEAM_ENEMY: 0 }
 
     def init(self):
@@ -35,43 +35,43 @@ class Stage(rpg.event.EventDispatcher):
     def get_players(self):
         return rpg.model.get_players()
 
-    def get_characters(self):
-        return self.get_players() + self.get_enemies()
+    def get_characters(self, team = None):
+        if team == TEAM_PLAYER:
+            return self.get_players()
+        elif team == TEAM_ENEMY:
+            return self.get_enemies()
+        else:
+            return self.get_players() + self.get_enemies()
 
     def get_friends(self, character):
-        if character.is_player():
-            return self.get_players()
-        else:
-            return self.get_enemies()
+        return self.get_characters(character.get_team())
 
     def get_rivals(self, character):
-        if character.is_player():
-            return self.get_enemies()
-        else:
-            return self.get_players()
+        return self.get_characters(character.get_rival_team())
 
     def get_actor(self):
         return self.actor
-
-    def next_actor(self, character = None):
-        'dont call if self.is_end() == True'
-        if not character: character = self.actor
-
-        if character.is_player() and character.index < len(self.get_enemies()):
-            actor = self.get_enemies()[character.index]
-        else:
-            actor = self.get_players()[(character.index + 1) % len(self.get_players())]
-
-        if actor.is_alive():
-            return actor
-        else:
-            return self.next_actor(actor)
 
     def finalize_turn(self):
         if self.is_end():
             self.actor = None
         else:
-            self.actor = self.next_actor()
+            self.setup_next_actor()
+
+    def setup_next_actor(self):
+        'dont call if self.is_end() == True'
+        self.last_actors[self.actor.get_team()] = self.actor
+
+        actor = self.last_actors[self.actor.get_rival_team()]
+        if not actor:
+            actor = self.get_characters(self.actor.get_rival_team())[-1]
+        friends = self.get_friends(actor)
+        while True:
+            actor = friends[(actor.index + 1) % len(friends)]
+            if actor.is_alive():
+                break
+
+        self.actor = actor
 
     def is_end(self):
         return self.is_win() or self.is_loose()
