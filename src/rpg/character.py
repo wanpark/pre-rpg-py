@@ -9,6 +9,7 @@ import rpg.sprite
 import rpg.job
 import rpg.resource
 import rpg.event
+import rpg.skill
 
 
 class Character(rpg.event.EventDispatcher):
@@ -24,8 +25,8 @@ class Character(rpg.event.EventDispatcher):
         self.sex = sex
 
         self.total_exps = {}
-        self.active_learned_skills = []
-        self.learned_skills = []
+        self.active_learned_skills = [rpg.skill.get_skill('fire')]
+        self.learned_skills = [rpg.skill.get_skill('fire')]
 
         self.clear_parameters()
 

@@ -18,7 +18,7 @@ class Stage(rpg.event.EventDispatcher):
             TEAM_PLAYER: None,
             TEAM_ENEMY: None
         }
-        self.eps = { TEAM_PLAYER: 0, TEAM_ENEMY: 0 }
+        self.eps = { TEAM_PLAYER: 5, TEAM_ENEMY: 5 }
 
     def init(self):
         "call before battle start"

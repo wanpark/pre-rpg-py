@@ -13,7 +13,9 @@ def image(name):
 fonts = {}
 def font(small = False):
     size = 10 if small else 12
-    return fonts.setdefault(size, pygame.font.Font(get_resouce_path('bdfmplus.ttf'), size))
+    if size in fonts: return fonts[size]
+    fonts[size] = pygame.font.Font(get_resouce_path('bdfmplus.ttf'), size)
+    return fonts[size]
 
 
 def get_resouce_path(name):

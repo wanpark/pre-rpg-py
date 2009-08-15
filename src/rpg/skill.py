@@ -54,6 +54,7 @@ class Command(object):
         return self.get_ep_cost() <= self.get_stage().get_ep(self.actor.get_team())
 
     def do(self):
+        self.get_stage().set_ep(self.actor.get_team(), self.get_stage().get_ep(self.actor.get_team()) - self.get_ep_cost())
         for target, damage in self.get_damages().iteritems():
             target.damage(damage)
 
@@ -72,27 +73,24 @@ class BeatCommand(Command):
 class WatchCommand(Command):
     def __init__(self):
         super(WatchCommand, self).__init__(TARGET_NONE)
-    def do(self):
-        pass
 
 class DefenceCommand(Command):
     def __init__(self):
         super(DefenceCommand, self).__init__(TARGET_NONE)
-    def do(self):
-        pass
 
 class FireCommand(Command):
     def __init__(self):
-        super(FireCommand, self).__init__(TARGET_NONE, ep_cost = 3)
-    def do(self):
-        pass
+        super(FireCommand, self).__init__(TARGET_TEAM, ep_cost = 3)
+
+    def get_damages(self):
+        return dict([(target, 3) for target in self.targets])
 
 
 _skills = dict([(skill.name, skill) for skill in [
     Skill('beat', u'なぐる', 1, True, u'物理攻撃3'),
     Skill('attack', u'こうげき', 1, True, u'物理攻撃5'),
     Skill('defence', u'ぼうぎょ', 1, True, u'1ターンの間ダメージ-50%'),
-    Skill('fire', u'ファイア', 3, True, u'魔法攻撃10 EP-1'),
+    Skill('fire', u'ファイア', 3, True, u'全体魔法攻撃3 EP-3'),
     Skill('watch', u'かんさつ', 1, True, u'敵を知り 己を知って ひとやすみ')
 ]])
 

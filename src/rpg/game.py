@@ -10,6 +10,7 @@ import rpg.model
 import rpg.lang
 import rpg.menu
 import rpg.draw
+import rpg.image
 
 class GameScene(rpg.scene.Scene):
     def __init__(self):
@@ -146,8 +147,17 @@ class CommandSelectController(rpg.scene.Controller):
 
     def on_select_command(self, event):
         self.command = event.button.item
-        self.scene.set_controller(TargetSelectController(
-            self.scene, self.command.get_target_type(),
+
+        if self.command.get_target_type() == TARGET_ONE:
+            target_select_controller_class = OneTargetSelectController
+        elif self.command.get_target_type() == TARGET_TEAM:
+            target_select_controller_class = TeamTargetSelectController
+        else:
+            self.on_select_target([])
+            return
+
+        self.scene.set_controller(target_select_controller_class(
+            self.scene,
             self.on_select_target, self.on_cancel_target,
             self.on_focus_target, self.on_unfocus_target
         ))
@@ -162,6 +172,7 @@ class CommandSelectController(rpg.scene.Controller):
             self.view(target).hide_hp_change()
 
     def on_select_target(self, targets):
+        self.view('ep').hide_ep_change(self.character.get_team())
         self.command.set_targets(targets)
         self.scene.set_controller(CommandExecuteController(self.scene, self.command))
 
@@ -214,7 +225,7 @@ class CommandSelectBox(rpg.ui.RadioTable):
 
 class TargetSelectController(rpg.scene.Controller):
     def __init__(
-        self, scene, target_type,
+        self, scene,
         on_select = rpg.lang.empty_function, on_cancel = rpg.lang.empty_function,
         on_focus = rpg.lang.empty_function, on_unfocus = rpg.lang.empty_function
     ):
@@ -223,7 +234,7 @@ class TargetSelectController(rpg.scene.Controller):
         self.on_cancel = on_cancel
         self.on_focus = on_focus
         self.on_unfocus = on_unfocus
-        self.focused_character = None
+        self.focused_characters = []
 
         self.cursors = {}
         for characters, position in [(rpg.model.get_stage().get_players(), 'left'), (rpg.model.get_stage().get_enemies(), 'right')]:
@@ -232,32 +243,25 @@ class TargetSelectController(rpg.scene.Controller):
                 cursor.point(self.scene.get_view_for(character).get_sprite())
                 self.cursors[character] = cursor
 
-        self.add_event_listener(MOUSEBUTTONUP, self.on_mouse_click)
+        self.add_event_listener(MOUSEBUTTONUP, self.on_click)
 
-    def get_nearlest_alive_character(self, character, next = True):
-        if character.is_alive():
-            return character
-        friends = rpg.model.get_stage().get_friends(character)
-        diff = 1 if next else -1
-        return self.get_nearlest_alive_character(friends[(character.index + diff) % len(friends)], next)
+    def focus(self, characters):
+        if self.focused_characters:
+            self.on_unfocus(self.focused_characters)
+            for character in self.focused_characters:
+                self.scene.remove_view(self.get_cursor(character))
 
-    def focus(self, character, next = True):
-        character = self.get_nearlest_alive_character(character, next)
-        if self.focused_character:
-            self.on_unfocus([self.focused_character])
-            self.scene.remove_view(self.get_cursor(self.focused_character))
+        self.focused_characters = characters
+        for character in self.focused_characters:
+            self.scene.add_view(self.get_cursor(character))
 
-        self.focused_character = character
-        self.scene.add_view(self.get_cursor(self.focused_character))
-
-        self.on_focus([character])
+        self.on_focus(self.focused_characters)
 
     def get_focused_characters(self):
-        return [self.focused_character]
+        return self.focused_characters
 
-    def select(self, character):
-        character = self.get_nearlest_alive_character(character)
-        self.on_select([character])
+    def select(self, characters):
+        self.on_select(characters)
 
     def get_cursor(self, character):
         return self.cursors[character]
@@ -268,54 +272,126 @@ class TargetSelectController(rpg.scene.Controller):
         for character in rpg.model.get_stage().get_characters():
             if character.is_alive():
                 sprite = self.scene.get_view_for(character).get_sprite()
-                sprite.on_click = lambda event, character = character: self.select(character)
-                sprite.on_mouse_over = lambda event, character = character: self.focus(character)
-
-        self.focus(rpg.model.get_stage().get_enemies()[0])
+                sprite.on_click = self.character_click_handler(character)
+                sprite.on_mouse_over = self.character_mouse_over_handler(character)
 
     def disable(self):
         super(TargetSelectController, self).disable()
-        if self.focused_character:
-            self.scene.remove_view(self.get_cursor(self.focused_character))
         for character in rpg.model.get_stage().get_characters():
+            self.scene.remove_view(self.get_cursor(character))
             if character.is_alive():
                 sprite = self.scene.get_view_for(character).get_sprite()
                 del sprite.on_click
                 del sprite.on_mouse_over
 
     def update(self):
-        if not self.focused_character: return
+        if not self.focused_characters: return
 
         if rpg.event.is_key_down(*CANCEL_KEYS):
             self.on_cancel()
-        elif rpg.event.is_key_down(*OK_KEYS):
-            if self.focused_character:
-                self.select(self.focused_character)
-        if rpg.event.is_key_down(K_UP):
-            friends = self.get_friends()
-            self.focus(friends[(self.focused_character.index - 1) % len(friends)], next = False)
-        elif rpg.event.is_key_down(K_DOWN):
-            friends = self.get_friends()
-            self.focus(friends[(self.focused_character.index + 1) % len(friends)])
-        elif rpg.event.is_key_down(K_RIGHT, K_LEFT):
-            rivals = self.get_rivals()
-            self.focus(rivals[min([self.focused_character.index, len(rivals) - 1])])
 
-    def on_mouse_click(self, event):
+    def on_click(self, event):
         if event.button == MOUSE_BUTTON_RIGHT:
             self.on_cancel()
 
+    def character_click_handler(self, character):
+        return lambda event: True
+
+    def character_mouse_over_handler(self, character):
+        return lambda event: True
+
     def get_friends(self):
-        if self.focused_character.is_player():
-            return rpg.model.get_stage().get_players()
-        else:
-            return rpg.model.get_stage().get_enemies()
+        if not self.focused_characters: return []
+        return rpg.model.get_stage().get_characters(self.focused_characters[0].get_team())
 
     def get_rivals(self):
-        if self.focused_character.is_player():
-            return rpg.model.get_stage().get_enemies()
-        else:
-            return rpg.model.get_stage().get_players()
+        if not self.focused_characters: return []
+        return rpg.model.get_stage().get_characters(self.focused_characters[0].get_rival_team())
+
+class OneTargetSelectController(TargetSelectController):
+    def __init__(self, *args, **kwargs):
+        super(OneTargetSelectController, self).__init__(*args, **kwargs)
+
+    def get_nearlest_alive_character(self, character, next = True):
+        if character.is_alive():
+            return character
+        friends = rpg.model.get_stage().get_friends(character)
+        diff = 1 if next else -1
+        return self.get_nearlest_alive_character(friends[(character.index + diff) % len(friends)], next)
+
+    def focus(self, character, next = True):
+        character = self.get_nearlest_alive_character(character, next)
+        super(OneTargetSelectController, self).focus([character])
+
+    def select(self, character):
+        character = self.get_nearlest_alive_character(character)
+        super(OneTargetSelectController, self).select([character])
+
+    def update(self):
+        super(OneTargetSelectController, self).update()
+
+        if not self.get_focused_characters(): return
+        focused = self.get_focused_characters()[0]
+
+        if rpg.event.is_key_down(*OK_KEYS):
+            self.select(focused)
+
+        if rpg.event.is_key_down(K_UP):
+            friends = self.get_friends()
+            self.focus(friends[(focused.index - 1) % len(friends)], next = False)
+        elif rpg.event.is_key_down(K_DOWN):
+            friends = self.get_friends()
+            self.focus(friends[(focused.index + 1) % len(friends)])
+        elif rpg.event.is_key_down(K_RIGHT, K_LEFT):
+            rivals = self.get_rivals()
+            self.focus(rivals[min([focused.index, len(rivals) - 1])])
+
+    def character_click_handler(self, character):
+        return lambda event: self.select(character)
+
+    def character_mouse_over_handler(self, character):
+        return lambda event: self.focus(character)
+
+    def enable(self):
+        super(OneTargetSelectController, self).enable()
+        stage = rpg.model.get_stage()
+        self.focus(stage.get_characters(rpg.model.get_stage().get_actor().get_rival_team())[0])
+
+class TeamTargetSelectController(TargetSelectController):
+    def __init__(self, *args, **kwargs):
+        super(TeamTargetSelectController, self).__init__(*args, **kwargs)
+
+    def focus(self, team):
+        super(TeamTargetSelectController, self).focus(self.get_targets(team))
+
+    def select(self, team):
+        super(TeamTargetSelectController, self).select(self.get_targets(team))
+
+    def get_targets(self, team):
+        return [target for target in rpg.model.get_stage().get_characters(team) if target.is_alive()]
+
+    def update(self):
+        super(TeamTargetSelectController, self).update()
+
+        if not self.get_focused_characters(): return
+        focused = self.get_focused_characters()[0]
+
+        if rpg.event.is_key_down(*OK_KEYS):
+            self.select(focused.get_team())
+
+        if rpg.event.is_key_down(K_RIGHT, K_LEFT):
+            self.focus(focused.get_rival_team())
+
+    def character_click_handler(self, character):
+        return lambda event: self.select(character.get_team())
+
+    def character_mouse_over_handler(self, character):
+        return lambda event: self.focus(character.get_team())
+
+    def enable(self):
+        super(TeamTargetSelectController, self).enable()
+        stage = rpg.model.get_stage()
+        self.focus(rpg.model.get_stage().get_actor().get_rival_team())
 
 
 class CommandExecuteController(rpg.scene.CoroutineController):
@@ -436,55 +512,6 @@ class WinController(rpg.scene.CoroutineController):
     def on_click(self, event):
         self.finish()
 
-def get_command_effect_controller(scene, command):
-    controller_cls = getattr(
-        sys.modules['rpg.game'], command.name.capitalize() + 'CommandEffectController',
-        DefaultCommandEffectController
-    )
-    controller = controller_cls(scene)
-    controller.command = command
-    return controller
-
-class DefaultCommandEffectController(rpg.scene.Controller):
-    def update(self):
-        self.scene.set_controller(TurnEndController(self.scene))
-
-class BeatCommandEffectController(rpg.scene.CoroutineController):
-    def update_generator(self):
-        sprite = self.scene.get_view_for(self.command.targets[0]).sprite
-        sprite.rect.left += 3
-        for i in self.wait_generator(50): yield
-        sprite.rect.left -= 6
-        for i in self.wait_generator(50): yield
-        sprite.rect.left += 6
-        for i in self.wait_generator(50): yield
-        sprite.rect.left -= 3
-        for i in self.wait_generator(200): yield
-        self.scene.set_controller(TurnEndController(self.scene))
-
-class WatchCommandEffectController(rpg.scene.CoroutineController):
-    def update_generator(self):
-        sprite = self.scene.get_view_for(self.command.actor).sprite
-        origin = sprite.rect.topleft
-        image = sprite.image
-
-        target_view = self.scene.get_view_for(self.command.targets[0])
-        if target_view.is_flipped():
-            sprite.rect.bottomright = target_view.sprite.rect.midbottom
-            sprite.rect.left -= 30
-        else:
-            sprite.rect.bottomleft = target_view.sprite.rect.midbottom
-            sprite.rect.left += 30
-        if self.command.actor.is_player() == self.command.targets[0].is_player():
-            sprite.image = pygame.transform.flip(sprite.image, True, False)
-
-        for i in self.wait_generator(600): yield
-
-        sprite.rect.topleft = origin
-        sprite.image = image
-        for i in self.wait_generator(200): yield
-
-        self.scene.set_controller(TurnEndController(self.scene))
 
 
 class EpView(rpg.sprite.Group):
@@ -535,3 +562,80 @@ class EpView(rpg.sprite.Group):
         else:
             self.ep_changes = { TEAM_PLAYER: 0, TEAM_ENEMY: 0 }
             self.draw_ep()
+
+
+
+def get_command_effect_controller(scene, command):
+    controller_cls = getattr(
+        sys.modules['rpg.game'], command.name.capitalize() + 'CommandEffectController',
+        DefaultCommandEffectController
+    )
+    controller = controller_cls(scene)
+    controller.command = command
+    return controller
+
+class DefaultCommandEffectController(rpg.scene.Controller):
+    def update(self):
+        self.scene.set_controller(TurnEndController(self.scene))
+
+class BeatCommandEffectController(rpg.scene.CoroutineController):
+    def update_generator(self):
+        sprite = self.scene.get_view_for(self.command.targets[0]).sprite
+        sprite.rect.left += 3
+        for i in self.wait_generator(50): yield
+        sprite.rect.left -= 6
+        for i in self.wait_generator(50): yield
+        sprite.rect.left += 6
+        for i in self.wait_generator(50): yield
+        sprite.rect.left -= 3
+        for i in self.wait_generator(200): yield
+        self.scene.set_controller(TurnEndController(self.scene))
+
+class WatchCommandEffectController(rpg.scene.CoroutineController):
+    def update_generator(self):
+        sprite = self.scene.get_view_for(self.command.actor).sprite
+        origin = sprite.rect.topleft
+        image = sprite.image
+
+        target_view = self.scene.get_view_for(self.command.targets[0])
+        if target_view.is_flipped():
+            sprite.rect.bottomright = target_view.sprite.rect.midbottom
+            sprite.rect.left -= 30
+        else:
+            sprite.rect.bottomleft = target_view.sprite.rect.midbottom
+            sprite.rect.left += 30
+        if self.command.actor.is_player() == self.command.targets[0].is_player():
+            sprite.image = pygame.transform.flip(sprite.image, True, False)
+
+        for i in self.wait_generator(600): yield
+
+        sprite.rect.topleft = origin
+        sprite.image = image
+        for i in self.wait_generator(200): yield
+
+        self.scene.set_controller(TurnEndController(self.scene))
+
+class FireCommandEffectController(rpg.scene.CoroutineController):
+    def update_generator(self):
+        images = dict([(target, self.scene.get_view_for(target).sprite.image) for target in self.command.targets])
+        burn_images = dict([(target, rpg.image.blend_color(image, Color(255, 0, 0), 0.5)) for target, image in images.iteritems()])
+
+        for target, image in images.iteritems():            
+            sprite = self.scene.get_view_for(target).sprite
+            sprite.image = burn_images[target]
+
+            direction = 1 if self.scene.get_view_for(target).is_flipped() else -1
+            sprite.rect.left += 3 * direction
+
+        for i in self.wait_generator(400): yield
+
+        for target, image in images.iteritems():
+            sprite = self.scene.get_view_for(target).sprite
+            sprite.image = images[target]
+
+            direction = 1 if self.scene.get_view_for(target).is_flipped() else -1
+            sprite.rect.left -= 3 * direction
+
+        for i in self.wait_generator(200): yield
+
+        self.scene.set_controller(TurnEndController(self.scene))

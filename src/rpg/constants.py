@@ -26,7 +26,7 @@ LEARN_STATE_NONE = 'none'
 
 TARGET_NONE = 'none'
 TARGET_ONE = 'one'
-TARGET_PARTY = 'party'
+TARGET_TEAM = 'team'
 
 
 # application setting
