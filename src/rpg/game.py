@@ -87,7 +87,7 @@ class IntervalController(rpg.scene.CoroutineController):
 
         self.setup_stage()
 
-        self.scene.set_controller(CommandSelectController(self.scene))
+        self.scene.set_controller(TurnBeginController(self.scene))
 
     def on_key_down(self, event):
         if event.key == K_DOWN:
@@ -344,6 +344,14 @@ class CommandExecuteController(rpg.scene.CoroutineController):
         return serif
 
 
+class TurnBeginController(rpg.scene.CoroutineController):
+    def update_generator(self):
+        if rpg.model.get_stage().get_actor().is_enemy():
+            for i in self.wait_generator(300): yield
+            self.scene.set_controller(CommandExecuteController(self.scene, rpg.model.get_stage().create_command()))
+        else:
+            self.scene.set_controller(CommandSelectController(self.scene))
+
 class TurnEndController(rpg.scene.CoroutineController):
     def update_generator(self):
         rpg.model.get_stage().finalize_turn()
@@ -356,11 +364,8 @@ class TurnEndController(rpg.scene.CoroutineController):
             else:
                 pass
         else:
-            if rpg.model.get_stage().get_actor().is_enemy():
-                for i in self.wait_generator(300): yield
-                self.scene.set_controller(CommandExecuteController(self.scene, rpg.model.get_stage().create_command()))
-            else:
-                self.scene.set_controller(CommandSelectController(self.scene))
+            self.scene.set_controller(TurnBeginController(self.scene))
+        yield
 
 class WinController(rpg.scene.CoroutineController):
     def update_generator(self):

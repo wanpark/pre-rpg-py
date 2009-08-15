@@ -10,10 +10,14 @@ EP_CHANGED = 'ep_changed'
 
 class Stage(rpg.event.EventDispatcher):    
 
-    def __init__(self, enemies):
+    def __init__(self, enemies, first_team):
         super(Stage, self).__init__()
         self.enemies = enemies
-        self.actor = self.get_players()[0]
+        self.actors = {
+            TEAM_PLAYER: self.get_players()[0],
+            TEAM_ENEMY: self.get_enemies()[0]
+        }
+        self.actor = self.actors[first_team]
         self.eps = { TEAM_PLAYER: 0, TEAM_ENEMY: 0 }
 
     def init(self):
@@ -97,7 +101,7 @@ class Stage1_1(Stage):
             rpg.character.Enemy(0, rpg.job.get_job('villager'), SEX_FEMALE),
             rpg.character.Enemy(1, rpg.job.get_job('villager'), SEX_MALE),
             rpg.character.Enemy(2, rpg.job.get_job('cat'), SEX_FEMALE),
-        ])
+        ], TEAM_PLAYER)
 
     def create_command(self):
         command = rpg.skill.get_skill('beat').create_command(self.get_actor())
