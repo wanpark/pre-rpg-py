@@ -245,13 +245,13 @@ class JobView(rpg.sprite.CompositeGroup):
         rpg.sprite.CompositeGroup.__init__(self)
         self.player = player
 
-        separator = rpg.sprite.Sprite(pygame.Surface((300, 1)))
+        separator = rpg.sprite.Sprite(pygame.Surface((367, 1)))
         separator.image.fill((255, 255, 255))
-        pygame.draw.line(separator.image, (0, 0, 0), (0, 0), (270, 0))
+        pygame.draw.line(separator.image, COLOR_FOREGROUND, (0, 0), (separator.image.get_width(), 0))
         separator.rect.topleft = (100, 141)
         self.add(separator)
 
-        self.table = rpg.ui.RadioTable(cols = 3)
+        self.table = rpg.ui.RadioTable(cols = 4)
         for job in rpg.job.get_jobs():
             button = JobTableRadioButton(
                 job.label, pygame.rect.Rect(100, 150, 80, 20),
@@ -282,7 +282,7 @@ class JobView(rpg.sprite.CompositeGroup):
         if not self.player.is_master(job):
             self.info.image.blit(rpg.resource.font().render(u'Exp %2d / %d' % (self.player.get_current_exp(job), job.exp_for_level(self.player.get_level(job))), False, (0, 0, 0)), (10, 120))
 
-        for i, trait in enumerate(job.traits):
+        for i, trait in enumerate(job.get_traits()):
             self.info.image.blit(rpg.resource.font().render(trait.description, False, (0, 0, 0)), (100, 20 + i * 15))
 
         for i, line in enumerate(job.description.split('\n')):
@@ -341,9 +341,9 @@ class SkillView(rpg.sprite.CompositeGroup):
         rpg.sprite.CompositeGroup.__init__(self)
         self.player = player
 
-        separator = rpg.sprite.Sprite(pygame.Surface((300, 1)))
+        separator = rpg.sprite.Sprite(pygame.Surface((367, 1)))
         separator.image.fill((255, 255, 255))
-        pygame.draw.line(separator.image, (0, 0, 0), (0, 0), (270, 0))
+        pygame.draw.line(separator.image, COLOR_FOREGROUND, (0, 0), (separator.image.get_width(), 0))
         separator.rect.topleft = (100, 36)
         self.add(separator)
 
@@ -353,7 +353,7 @@ class SkillView(rpg.sprite.CompositeGroup):
         job_label.image.blit(rpg.resource.font().render(u'クラススキル', False, (0, 0, 0)), (0, 0))
         self.add(job_label)
 
-        self.job_table = rpg.ui.ToggleTable(cols = 3)
+        self.job_table = rpg.ui.ToggleTable(cols = 4)
         self.job_table.toggle = self.job_table.select = rpg.lang.empty_function  # disable select
         
         self.add(self.job_table)
@@ -368,7 +368,7 @@ class SkillView(rpg.sprite.CompositeGroup):
         self.remain_label.rect.topleft = (180, 100)
         self.add(self.remain_label)
 
-        self.skill_table = SkillSkillToggleTable(cols = 3, player = self.player)
+        self.skill_table = SkillSkillToggleTable(cols = 4, player = self.player)
         for skill in self.player.get_learned_skills():
             button = rpg.ui.ToggleButton(skill.label, pygame.rect.Rect(100, 120, 80, 20), skill)
             if rpg.lang.exists_in(self.player.get_active_learned_skills(), skill):

@@ -28,10 +28,14 @@ TARGET_NONE = 'none'
 TARGET_ONE = 'one'
 TARGET_TEAM = 'team'
 
+DAMAGE_PHYSIC = 1
+DAMAGE_MAGIC = 1 << 1
+
+
 
 # application setting
 
-SCREEN_RECT = pygame.rect.Rect(100, 100, 400, 300)
+SCREEN_RECT = pygame.rect.Rect(100, 100, 480, 360)
 FPS = 60
 RESOURCE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'resource')
 

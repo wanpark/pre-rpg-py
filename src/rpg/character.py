@@ -145,6 +145,13 @@ class Character(rpg.event.EventDispatcher):
         if self.hp != old_hp:
             self.dispatch(self.DAMAGED, hp_before_damage = old_hp, damage = n)
 
+    def get_traits(self):
+        return self.get_job().get_traits()
+
+    def has_trait(self, name):
+        return self.get_job().has_trait(name)
+
+
 class Player(Character):
     def __init__(self, index, name, job, sex):
         Character.__init__(self, index, name, job, sex)
@@ -173,7 +180,7 @@ class CharacterView(rpg.sprite.Group):
         self.on_job_change()
 
         self.parameters_sprite = rpg.sprite.Sprite(pygame.Surface((30, 50)))
-        self.parameters_sprite.rect.bottomleft = (10, self.sprite.rect.bottom)
+        self.parameters_sprite.rect.bottomleft = (20, self.sprite.rect.bottom)
         if self.is_flipped():
             self.parameters_sprite.rect.right = SCREEN_RECT.width - self.parameters_sprite.rect.left
 
@@ -202,7 +209,7 @@ class CharacterView(rpg.sprite.Group):
     def on_job_change(self, *args):
         self.sprite.image = rpg.resource.job_image(self.character.get_job(), self.character.get_sex())
         self.sprite.rect = self.sprite.image.get_rect()
-        self.sprite.rect.midbottom = (70, 90 + self.character.index * 90)
+        self.sprite.rect.midbottom = (100, 110 + self.character.index * 100)
         if self.is_flipped():
             self.sprite.image = pygame.transform.flip(self.sprite.image, True, False)
             self.sprite.rect.centerx = SCREEN_RECT.width - self.sprite.rect.centerx

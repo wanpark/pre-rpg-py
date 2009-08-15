@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 
 import sys
+import math
 from rpg.constants import *
 import rpg.model
 
@@ -60,7 +61,7 @@ class Command(object):
 
 class DefaultCommand(Command):
     def __init__(self):
-        super(DefaultCommand, self).__init__(TARGET_ONE)
+        super(DefaultCommand, self).__init__(TARGET_NONE)
 
 
 class BeatCommand(Command):
@@ -68,11 +69,11 @@ class BeatCommand(Command):
         super(BeatCommand, self).__init__(TARGET_ONE)
 
     def get_damages(self):
-        return dict([(target, 3) for target in self.targets])
+        return dict([(target, modify_damage(3, DAMAGE_PHYSIC, self.actor, target)) for target in self.targets])
 
 class WatchCommand(Command):
     def __init__(self):
-        super(WatchCommand, self).__init__(TARGET_NONE)
+        super(WatchCommand, self).__init__(TARGET_ONE)
 
 class DefenceCommand(Command):
     def __init__(self):
@@ -83,7 +84,20 @@ class FireCommand(Command):
         super(FireCommand, self).__init__(TARGET_TEAM, ep_cost = 3)
 
     def get_damages(self):
-        return dict([(target, 3) for target in self.targets])
+        return dict([(target, modify_damage(3, DAMAGE_MAGIC, self.actor, target)) for target in self.targets])
+
+
+
+def modify_damage(value, attr, actor, target):
+    if attr & DAMAGE_PHYSIC:
+        if actor.has_trait('villager'):
+            value += math.floor(rpg.model.get_stage().get_ep(actor.get_team()) / 2)
+        if target.has_trait('nerd'):
+            value += math.floor(value / 2)
+    if attr & DAMAGE_MAGIC:
+        if actor.has_trait('magician'):
+            value += math.floor(value / 2)
+    return value
 
 
 _skills = dict([(skill.name, skill) for skill in [

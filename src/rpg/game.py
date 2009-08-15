@@ -27,7 +27,7 @@ class IntervalController(rpg.scene.CoroutineController):
 
         self.navigator = rpg.sprite.AnimationSprite(
             'arrow.png', 2,
-            (SCREEN_RECT.width - 200, SCREEN_RECT.height / 2 - 10),
+            (SCREEN_RECT.width / 2, SCREEN_RECT.height / 2 - 10),
             3
         )
 
@@ -200,21 +200,21 @@ class CommandSelectBox(rpg.ui.RadioTable):
 
         commands = self.character.get_commands()
 
-        self.box = rpg.sprite.Sprite(pygame.Surface((105, 3 + 22 * len(commands))))
+        self.box = rpg.sprite.Sprite(pygame.Surface((105, 7 + 18 * len(commands))))
         self.box.image.fill(COLOR_BACKGROUND)
         rpg.draw.rounded_rect(self.box.image, self.box.rect)
         if view.is_flipped():
             self.box.rect.midright = view.sprite.rect.center
-            self.box.rect.left -= 30
+            self.box.rect.left -= 40
         else:
             self.box.rect.midleft = view.sprite.rect.center
-            self.box.rect.left += 30
+            self.box.rect.left += 40
         self.add(self.box)
 
         for command in commands:
             button = rpg.ui.RadioButton(
                 command.label,
-                Rect(self.box.rect.left + 20, self.box.rect.top + 2, 80, 20),
+                Rect(self.box.rect.left + 20, self.box.rect.top + 4, 80, 16),
                 item = command,
                 enabled = command.can_do()
             )
@@ -422,6 +422,7 @@ class CommandExecuteController(rpg.scene.CoroutineController):
 
 class TurnBeginController(rpg.scene.CoroutineController):
     def update_generator(self):
+        rpg.model.get_stage().initialize_turn()
         if rpg.model.get_stage().get_actor().is_enemy():
             for i in self.wait_generator(300): yield
             self.scene.set_controller(CommandExecuteController(self.scene, rpg.model.get_stage().create_command()))
@@ -490,7 +491,7 @@ class WinController(rpg.scene.CoroutineController):
             for player, message in messages.items():
                 serif = rpg.sprite.Sprite(rpg.resource.font(small = True).render(message.pop(0), False, COLOR_FOREGROUND))
                 serif.rect.midbottom = self.view(player).sprite.rect.midbottom
-                serif.rect.top -= 60
+                serif.rect.top -= 65
                 self.add_view(serif)
                 if not message: del messages[player]
             for i in self.wait_generator(1000): yield
@@ -518,7 +519,7 @@ class EpView(rpg.sprite.Group):
     def __init__(self):
         super(EpView, self).__init__()
         self.enemy_ep = rpg.sprite.Sprite(pygame.Surface((80, 15)))
-        self.enemy_ep.rect.topleft = (10, 5)
+        self.enemy_ep.rect.topleft = (20, 8)
         self.add(self.enemy_ep)
 
         self.player_ep = rpg.sprite.Sprite(pygame.Surface(self.enemy_ep.image.get_size()))
@@ -540,7 +541,7 @@ class EpView(rpg.sprite.Group):
 
     def draw_team_ep(self, team):
         sprite = self.player_ep if team == TEAM_PLAYER else self.enemy_ep
-        font = rpg.resource.font(small = True)
+        font = rpg.resource.font()
 
         sprite.image.fill(COLOR_BACKGROUND)
         label = font.render('EP %d' % rpg.model.get_stage().get_ep(team), False, COLOR_FOREGROUND)

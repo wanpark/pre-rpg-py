@@ -2,6 +2,7 @@
 
 import pygame
 from pygame.locals import *
+from rpg.constants import *
 import rpg
 import rpg.scene
 import rpg.sprite
@@ -18,7 +19,7 @@ class TitleScene(rpg.scene.Scene):
             rpg.sprite.AnimationSprite('girl_walk.png', 4, (20, 0)),
             rpg.sprite.AnimationSprite('ninja_walk.png', 4, (40, 0))
         )
-        self.characters.move_sprites(rpg.SCREEN_RECT.width, 200)
+        self.characters.move_sprites(SCREEN_RECT.width, 200)
         self.button = self.create_start_button()
         self.add_view(self.characters, self.button)
 
@@ -29,21 +30,21 @@ class TitleScene(rpg.scene.Scene):
         button = rpg.sprite.Sprite()
         button.image = rpg.resource.font().render(u'スタート', False, (0, 0, 0))
         rect = button.image.get_rect()
-        button.rect = rect.move((rpg.SCREEN_RECT.width - rect.width) / 2, 100)
+        button.rect = rect.move((SCREEN_RECT.width - rect.width) / 2, 100)
         button.on_click = self.start_game
         return button
 
     def update(self):
         rpg.scene.Scene.update(self)
 
-        if rpg.event.is_key_down(*rpg.OK_KEYS):
+        if rpg.event.is_key_down(*OK_KEYS):
             self.start_game()
             return
 
         self.characters.move_sprites(-1, 0)
         if self.characters.sprites()[-1].rect.right < 0:
             self.characters.move_sprites(
-                400 - self.characters.sprites()[0].rect.left,
+                SCREEN_RECT.width - self.characters.sprites()[0].rect.left,
                 0
             )
 

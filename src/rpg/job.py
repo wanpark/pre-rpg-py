@@ -10,7 +10,7 @@ class Job(object):
         self.label = label
         self.max_hp = max_hp
         self.skills = skills
-        self.traits = traits
+        self.traits = dict([(trait.name, trait) for trait in traits])
         self.description = description
         self.requires = []
 
@@ -51,6 +51,12 @@ class Job(object):
     def unavailable_skills(self, exp):
         level = self.level_for_exp(exp)
         return self.skills[level + 1:] if level + 1 < len(self.skills) else []
+
+    def get_traits(self):
+        return self.traits.values()
+
+    def has_trait(self, name):
+        return name in self.traits
 
 
 class Trait(object):
