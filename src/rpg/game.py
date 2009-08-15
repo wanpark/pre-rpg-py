@@ -423,7 +423,8 @@ class WinController(rpg.scene.CoroutineController):
     def finish(self):
         self.remove_all_views()
         for player in rpg.model.get_stage().get_players():
-            self.view(player).untransform()
+            if player.is_alive():
+                self.view(player).untransform()
         self.scene.remove_view_for('ep')
         rpg.model.next_stage()
         self.scene.set_controller(IntervalController(self.scene))
